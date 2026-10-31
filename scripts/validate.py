@@ -46,3 +46,28 @@ for entry in v2['addons']:
 for legacy in catalog['addons']:
     assert legacy in v2['addons'], 'API 2 must retain the complete existing API 1 entries'
 print('API 2 catalog validated; native entries require separate signed-artifact and device acceptance.')
+
+# CleanTV Samsung catalog: a separate file, so catalog.json and catalog-v2.json and their checks stay as upstream.
+def require(condition,message):
+    if not condition:raise SystemExit('cleantv-catalog.json: '+message)
+cleantv_raw=(root/'cleantv-catalog.json').read_bytes()
+# The Samsung host refuses catalog responses above 128 KiB.
+require(len(cleantv_raw)<=131072,'catalog exceeds 131072 bytes')
+cleantv=json.loads(cleantv_raw)
+Draft7Validator(json.loads((root/'cleantv-catalog.schema.json').read_bytes())).validate(cleantv)
+require(cleantv['api']==2 and len(cleantv['addons'])<=32,'api must be 2 with at most 32 entries')
+cleantv_ids=set()
+for entry in cleantv['addons']:
+    name=entry['id']
+    require(name not in cleantv_ids,f'duplicate id {name}')
+    cleantv_ids.add(name)
+    require(entry['path']==f"packages/{name}/{entry['version']}.json",f'{name}: path must be packages/<id>/<version>.json')
+    file=root/entry['path']
+    require(file.is_file(),f"{name}: {entry['path']} does not exist")
+    data=file.read_bytes()
+    require(len(data)<=65536,f'{name}: package exceeds 65536 bytes')
+    require(hashlib.sha256(data).hexdigest()==entry['sha256'],f"{name}: sha256 does not match the bytes of {entry['path']}")
+    package={key:value for key,value in entry.items() if key not in ('path','sha256')}
+    require(json.loads(data)==package,f'{name}: package must equal the entry without path and sha256')
+    if 'timeZone' in entry:ZoneInfo(entry['timeZone'])
+print('CleanTV catalog, checksums and packages validated.')

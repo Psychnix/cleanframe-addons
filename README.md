@@ -53,3 +53,18 @@ Der Mac-Editor von CleanTV bietet eine getrennte Add-on-Simulation und lesende T
 `catalog.json` erhält die API-1-Kompatibilität; `catalog-v2.json` ergänzt native Pakete. TVs lesen den freigegebenen Katalog von `main`. Paketversionen, Downloadpfade und Release-Tags bleiben unveränderlich. Add-ons und Katalog haben unabhängige Versionsnummern; Android-Versioncodes steigen monoton.
 
 Die nativen Quellen, festgelegten Abhängigkeiten und ein lokaler Builder sind enthalten. Signierschlüssel, Kontodaten und private Gerätekonfiguration bleiben lokal. Lizenz- und Herkunftshinweise stehen in [LICENSE](LICENSE), den einzelnen Paketen und den [Remote-Hinweisen](addons/apple-remote/NOTICE.md). CleanTV basiert auf [CleanFrame von nthnclrk](https://github.com/nthnclrk/CleanFrame).
+
+## CleanTV catalog (Samsung)
+
+The CleanTV Samsung host reads only `cleantv-catalog.json`; `catalog.json` and `catalog-v2.json` remain unchanged for upstream hosts and clean upstream syncs. The schema is [cleantv-catalog.schema.json](cleantv-catalog.schema.json).
+
+Each entry is a declarative API 1 package with the metadata rules of `package.schema.json` (name, description, author, license, version `x.y.z`), plus `path` (`packages/<id>/<version>.json`) and the lowercase SHA-256 of that file's exact bytes. The package file equals the entry without `path` and `sha256`. Packages contain no executable code; behaviour lives in the host. Limits: 32 entries, unique IDs, 64 KiB per package.
+
+| Kind | Rules |
+| --- | --- |
+| `text`, `clock` | As in `package.schema.json` (optional `text`, `timeZone`). |
+| `spotify` | The ID must be `spotify`. |
+| `wallpapers` | CleanTV only. Requires `index`, the repository path `cleantv-wallpapers/index.json`. |
+| `weather` | CleanTV only. No additional fields. |
+
+`python scripts/validate.py` checks this catalog as well. Hash the committed bytes: a Windows checkout with `core.autocrlf` may change line endings, so `git show HEAD:<path> | sha256sum` is the reliable value.

@@ -1,0 +1,268 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "Catalog read by the CleanTV Samsung host. Entries are declarative API 1 packages; behaviour for every kind lives in the host.",
+  "type": "object",
+  "required": [
+    "api",
+    "addons"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "api": {
+      "const": 2
+    },
+    "addons": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/definitions/widget"
+          },
+          {
+            "$ref": "#/definitions/spotify"
+          },
+          {
+            "$ref": "#/definitions/wallpapers"
+          },
+          {
+            "$ref": "#/definitions/weather"
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "api": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,47}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^packages/[a-z0-9-]+/[0-9]+\\.[0-9]+\\.[0-9]+\\.json$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "widget": {
+      "type": "object",
+      "required": [
+        "api",
+        "id",
+        "name",
+        "version",
+        "kind",
+        "description",
+        "author",
+        "license",
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "api": {
+          "$ref": "#/definitions/api"
+        },
+        "id": {
+          "$ref": "#/definitions/id"
+        },
+        "version": {
+          "$ref": "#/definitions/version"
+        },
+        "kind": {
+          "enum": [
+            "text",
+            "clock"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "timeZone": {
+          "type": "string"
+        },
+        "name": {
+          "$ref": "#/definitions/label"
+        },
+        "description": {
+          "$ref": "#/definitions/label"
+        },
+        "author": {
+          "$ref": "#/definitions/label"
+        },
+        "license": {
+          "$ref": "#/definitions/label"
+        },
+        "path": {
+          "$ref": "#/definitions/path"
+        },
+        "sha256": {
+          "$ref": "#/definitions/sha256"
+        }
+      }
+    },
+    "spotify": {
+      "type": "object",
+      "required": [
+        "api",
+        "id",
+        "name",
+        "version",
+        "kind",
+        "description",
+        "author",
+        "license",
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "api": {
+          "$ref": "#/definitions/api"
+        },
+        "id": {
+          "const": "spotify"
+        },
+        "version": {
+          "$ref": "#/definitions/version"
+        },
+        "kind": {
+          "const": "spotify"
+        },
+        "name": {
+          "$ref": "#/definitions/label"
+        },
+        "description": {
+          "$ref": "#/definitions/label"
+        },
+        "author": {
+          "$ref": "#/definitions/label"
+        },
+        "license": {
+          "$ref": "#/definitions/label"
+        },
+        "path": {
+          "$ref": "#/definitions/path"
+        },
+        "sha256": {
+          "$ref": "#/definitions/sha256"
+        }
+      }
+    },
+    "wallpapers": {
+      "type": "object",
+      "required": [
+        "api",
+        "id",
+        "name",
+        "version",
+        "kind",
+        "description",
+        "author",
+        "license",
+        "index",
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "api": {
+          "$ref": "#/definitions/api"
+        },
+        "id": {
+          "$ref": "#/definitions/id"
+        },
+        "version": {
+          "$ref": "#/definitions/version"
+        },
+        "kind": {
+          "const": "wallpapers"
+        },
+        "index": {
+          "type": "string",
+          "pattern": "^cleantv-wallpapers/index\\.json$"
+        },
+        "name": {
+          "$ref": "#/definitions/label"
+        },
+        "description": {
+          "$ref": "#/definitions/label"
+        },
+        "author": {
+          "$ref": "#/definitions/label"
+        },
+        "license": {
+          "$ref": "#/definitions/label"
+        },
+        "path": {
+          "$ref": "#/definitions/path"
+        },
+        "sha256": {
+          "$ref": "#/definitions/sha256"
+        }
+      }
+    },
+    "weather": {
+      "type": "object",
+      "required": [
+        "api",
+        "id",
+        "name",
+        "version",
+        "kind",
+        "description",
+        "author",
+        "license",
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "api": {
+          "$ref": "#/definitions/api"
+        },
+        "id": {
+          "$ref": "#/definitions/id"
+        },
+        "version": {
+          "$ref": "#/definitions/version"
+        },
+        "kind": {
+          "const": "weather"
+        },
+        "name": {
+          "$ref": "#/definitions/label"
+        },
+        "description": {
+          "$ref": "#/definitions/label"
+        },
+        "author": {
+          "$ref": "#/definitions/label"
+        },
+        "license": {
+          "$ref": "#/definitions/label"
+        },
+        "path": {
+          "$ref": "#/definitions/path"
+        },
+        "sha256": {
+          "$ref": "#/definitions/sha256"
+        }
+      }
+    }
+  }
+}
