@@ -18,6 +18,7 @@ The generated files on the TV are re-encoded and carry no metadata.
 
 - Formats: JPG (`.jpg`, `.jpeg`), PNG (`.png`) or WebP (`.webp`). Other files fail
   the run with a clear error, as do files that cannot be decoded and files over 30 MB.
+  16-bit PNGs (also black-and-white ones) are reduced to 8 bit.
 - Landscape photos work best. The generator applies the EXIF orientation, crops the
   centre to 16:9 and scales it to 1920 x 1080. Portrait or smaller photos are cropped
   or enlarged, with a warning.

@@ -178,8 +178,16 @@ def to_srgb(image, icc, label):
         ground = Image.new('RGB', image.size, (0, 0, 0))
         ground.paste(image, mask=image.getchannel('A'))
         image = ground
-    if image.mode not in ('RGB', 'CMYK', 'L'):
+    if image.mode in ('I;16', 'I;16L', 'I;16B', 'I;16N', 'I'):
+        # A 16-bit grey PNG (I;16 since Pillow 10, I before): round(v / 257) to 8 bit. convert('RGB')
+        # would clip every value above 255, so the photo would become white.
+        values = np.clip(np.asarray(image).astype(np.int64), 0, 65535)
+        image = Image.fromarray(((values + 128) // 257).astype(np.uint8))
+    if image.mode in ('1', 'YCbCr'):
         image = image.convert('RGB')
+    if image.mode not in ('RGB', 'CMYK', 'L'):
+        name = (label or '').rsplit('/', 1)[-1]
+        raise GenerateError(f'{name}: the colour mode {image.mode} is not supported; export an 8-bit JPG or PNG.', label)
     if icc:
         try:
             source = ImageCms.ImageCmsProfile(io.BytesIO(icc))

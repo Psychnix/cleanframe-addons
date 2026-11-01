@@ -9,10 +9,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 
 TOOLS = Path(__file__).resolve().parent
 GENERATOR = TOOLS / 'generate.py'
+sys.path.insert(0, str(TOOLS))
+import generate  # noqa: E402  (to_srgb is also tested directly)
 SCHEMA = TOOLS.parent / 'index.schema.json'
 SIZES = {'image.jpg': (1920, 1080), 'thumb.jpg': (512, 288), 'panel.jpg': (320, 180), 'study-soft.jpg': (1920, 1080),
          'field-blur.jpg': (1920, 1080), 'field-frost.jpg': (1920, 1080), 'field-clear.jpg': (1920, 1080)}
@@ -155,6 +158,38 @@ class Generate(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn('gross.jpg: 31457281 bytes is over the 30 MB limit', result.stdout)
         self.assertEqual(snapshot(self.root), before)
+
+    def test_16_bit_grayscale_png_keeps_its_tones(self):
+        # A 16-bit grey ramp from 8000 to 56000. Pillow opens it as I;16 (Pillow 10 and later) or I (9.x);
+        # a plain convert('RGB') would clip every value above 255 to white.
+        ramp = np.linspace(8000, 56000, 2400).round().astype(np.uint16)
+        Image.fromarray(np.tile(ramp, (1350, 1))).save(self.images / 'Grau_16bit.png', 'PNG')
+        with Image.open(self.images / 'Grau_16bit.png') as original:
+            self.assertIn(original.mode, ('I;16', 'I'))
+        first = run(self.root)
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        before = snapshot(self.root)
+        self.assertEqual(run(self.root).returncode, 0)
+        self.assertEqual(snapshot(self.root), before, 'the 16-bit path is deterministic too')
+        with Image.open(self.root / 'generated' / 'aw-grau-16bit' / 'image.jpg') as image:
+            grey = np.asarray(image.convert('L'), np.float64)
+        self.assertLess(grey.max(), 250, 'not clipped to white')
+        self.assertGreater(grey.min(), 5)
+        self.assertAlmostEqual(grey.mean(), 124.5, delta=4)
+        self.assertLess(grey[:, :100].mean() + 100, grey[:, -100:].mean(), 'dark on the left, light on the right')
+
+    def test_high_bit_depth_modes_are_scaled_and_others_fail_clearly(self):
+        label = 'cleantv-wallpapers/images/Messung.png'
+        i16 = Image.fromarray(np.full((9, 16), 32896, np.uint16))
+        for image in (i16, i16.convert('I')):
+            out = generate.to_srgb(image, None, label)
+            self.assertEqual(out.mode, 'RGB', image.mode)
+            self.assertEqual(out.getpixel((0, 0)), (128, 128, 128), image.mode)
+        self.assertEqual(generate.to_srgb(Image.fromarray(np.full((9, 16), 65535, np.uint16)), None, label).getpixel((0, 0)), (255, 255, 255))
+        with self.assertRaises(generate.GenerateError) as raised:
+            generate.to_srgb(Image.new('F', (16, 9), 0.5), None, label)
+        self.assertIn('Messung.png: the colour mode F is not supported', str(raised.exception))
+        self.assertEqual(raised.exception.file, label)
 
     def test_empty_folder_gives_an_empty_index(self):
         result = run(self.root)
