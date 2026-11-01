@@ -11,7 +11,7 @@ from pathlib import Path
 
 repo=Path(__file__).resolve().parents[1]
 INPUTS=['catalog.json','catalog-v2.json','catalog-v2.schema.json','native-package.schema.json','package.schema.json','cleantv-catalog.json','cleantv-catalog.schema.json']
-FOLDERS=['packages','examples','cleantv-packages']
+FOLDERS=['packages','examples','cleantv-packages','cleantv-wallpapers']
 HELLO='packages/cleantv-hello/1.0.0.json'
 
 def copy_inputs(target):
@@ -60,6 +60,10 @@ def wallpapers(**extra):
     entry={'api':1,'id':'cleantv-wallpapers','name':'Wallpapers','version':'1.0.0','kind':'wallpapers','description':'Wallpaper collection','author':'Psychnix','license':'MIT','index':'cleantv-wallpapers/index.json','path':'cleantv-packages/cleantv-wallpapers/1.0.0.json','sha256':''}
     entry.update(extra)
     return entry
+
+def without_wallpapers(fixture):
+    # The committed catalog lists the wallpapers package; cases that add their own entry start without it.
+    fixture.catalog['addons']=[entry for entry in fixture.catalog['addons'] if entry['kind']!='wallpapers']
 
 def rehello(fixture,**fields):
     entry=fixture.entry('cleantv-hello')
@@ -131,11 +135,11 @@ def _(f):
 
 @case('wallpapers package in cleantv-packages',True)
 def _(f):
-    f.add(wallpapers());f.save()
+    without_wallpapers(f);f.add(wallpapers());f.save()
 
 @case('weather and wallpapers together',True)
 def _(f):
-    f.add(weather());f.add(wallpapers());f.save()
+    without_wallpapers(f);f.add(weather());f.add(wallpapers());f.save()
 
 @case('the listed weather package (exact bytes, CleanTV path)',True)
 def _(f):
@@ -200,6 +204,90 @@ def _(f):
 def _(f):
     file=f.root/'cleantv-packages'/'cleantv-weather'/'0.9.0.json';file.parent.mkdir(parents=True,exist_ok=True)
     file.write_bytes(dump({'api':1,'id':'cleantv-weather','name':'Weather','version':'0.9.0','kind':'weather','description':EMOJI*121,'author':'Psychnix','license':'MIT'}))
+
+# ---------- Wallpaper index (cleantv-wallpapers/index.json) ----------
+WALLPAPER_FILES={'jpg':'image.jpg','thumb':'thumb.jpg','panel':'panel.jpg','study-soft':'study-soft.jpg','field-blur':'field-blur.jpg','field-frost':'field-frost.jpg','field-clear':'field-clear.jpg'}
+
+def wallpaper(f,wid='aw-berg',title='Berg',**extra):
+    """Write seven stand-in files for one entry (validate.py checks bytes, not pixels) and return the entry."""
+    files={}
+    for role,name in WALLPAPER_FILES.items():
+        data=(wid+'/'+role).encode('ascii')*8
+        path=f'cleantv-wallpapers/generated/{wid}/{name}'
+        target=f.root/path;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
+        files[role]={'path':path,'size':len(data),'sha256':hashlib.sha256(data).hexdigest()}
+    entry={'id':wid,'title':title,'rev':files['jpg']['sha256'][:12],'tone':'light','ut':{'tr':'mist','br':'light'},'frostVeil':0.2,'files':files}
+    entry.update(extra)
+    return entry
+
+def save_index(f,entries,data=None):
+    body=json.dumps({'api':1,'entries':entries},ensure_ascii=False,separators=(',',':'))+'\n'
+    (f.root/'cleantv-wallpapers'/'index.json').write_bytes(body.encode('utf-8') if data is None else data)
+
+@case('wallpaper index with two generated entries',True)
+def _(f):save_index(f,[wallpaper(f),wallpaper(f,'aw-see','See',listColumn=3,dockQuiet=True,clockMist=True)])
+
+@case('wallpapers package without its index',False,'cleantv-wallpapers/index.json: missing')
+def _(f):(f.root/'cleantv-wallpapers'/'index.json').unlink()
+
+@case('wallpaper file whose bytes changed',False,'aw-berg: sha256 does not match the bytes of cleantv-wallpapers/generated/aw-berg/thumb.jpg')
+def _(f):
+    entry=wallpaper(f);save_index(f,[entry]);path=f.root/entry['files']['thumb']['path'];data=bytearray(path.read_bytes());data[0]^=1;path.write_bytes(bytes(data))
+
+@case('wallpaper file with another size',False,'aw-berg: cleantv-wallpapers/generated/aw-berg/panel.jpg has')
+def _(f):
+    entry=wallpaper(f);entry['files']['panel']['size']+=1;save_index(f,[entry])
+
+@case('missing wallpaper file',False,'aw-berg: cleantv-wallpapers/generated/aw-berg/field-clear.jpg does not exist')
+def _(f):
+    entry=wallpaper(f);save_index(f,[entry]);(f.root/entry['files']['field-clear']['path']).unlink()
+
+@case('duplicate wallpaper id',False,'duplicate id aw-berg')
+def _(f):save_index(f,[wallpaper(f),wallpaper(f)])
+
+@case('wallpaper file in the folder of another id',False,'aw-see: the jpg path must be cleantv-wallpapers/generated/aw-see/image.jpg')
+def _(f):
+    first=wallpaper(f);second=wallpaper(f,'aw-see','See');second['files']['jpg']=first['files']['jpg'];second['rev']=first['rev'];save_index(f,[first,second])
+
+@case('wallpaper rev that is not the jpg checksum',False,'aw-berg: rev must be the first 12 hex digits')
+def _(f):save_index(f,[wallpaper(f,rev='0'*12)])
+
+@case('generated file that no entry references',False,'files in generated/ that no entry references: cleantv-wallpapers/generated/aw-alt/image.jpg')
+def _(f):
+    entry=wallpaper(f);save_index(f,[entry]);stray=f.root/'cleantv-wallpapers'/'generated'/'aw-alt'/'image.jpg';stray.parent.mkdir(parents=True);stray.write_bytes(b'old')
+
+@case('wallpaper index with 201 entries',False,'ValidationError')
+def _(f):
+    entry=wallpaper(f);save_index(f,[dict(entry,id='aw-x'+str(n)) for n in range(201)])
+
+@case('wallpaper index over 262144 bytes',False,'bytes exceeds 262144')
+def _(f):save_index(f,[],(json.dumps({'api':1,'entries':[]})+' '*262144).encode('utf-8'))
+
+@case('wallpaper title of 60 astral characters is exactly 120 UTF-16 units',True)
+def _(f):save_index(f,[wallpaper(f,title=EMOJI*60)])
+
+@case('wallpaper title of 61 astral characters is 122 UTF-16 units',False,'aw-berg: title exceeds 120 UTF-16 code units')
+def _(f):save_index(f,[wallpaper(f,title=EMOJI*61)])
+
+@case('wallpaper frost veil outside the five veil classes',False,'ValidationError')
+def _(f):save_index(f,[wallpaper(f,frostVeil=0.25)])
+
+@case('wallpaper listColumn given as true',False,'ValidationError')
+def _(f):save_index(f,[wallpaper(f,listColumn=True)])
+
+@case('wallpaper entry with an unknown field',False,'ValidationError')
+def _(f):save_index(f,[wallpaper(f,script='x')])
+
+@case('wallpaper id with a capital letter',False,'ValidationError')
+def _(f):save_index(f,[wallpaper(f,'aw-Berg')])
+
+@case('wallpaper panel over its size limit',False,'aw-berg: panel exceeds 65536 bytes')
+def _(f):
+    entry=wallpaper(f);path=f.root/entry['files']['panel']['path'];data=b'p'*65537;path.write_bytes(data)
+    entry['files']['panel'].update(size=len(data),sha256=hashlib.sha256(data).hexdigest());save_index(f,[entry])
+
+@case('wallpaper index encoded as UTF-16',False,'cleantv-wallpapers/index.json: must be UTF-8 JSON')
+def _(f):save_index(f,[],json.dumps({'api':1,'entries':[]}).encode('utf-16'))
 
 def main():
     failures=0

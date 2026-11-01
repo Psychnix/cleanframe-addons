@@ -25,6 +25,19 @@
       "license": "MIT",
       "path": "cleantv-packages/cleantv-weather/1.0.0.json",
       "sha256": "1c8cb0262e9890b3a44827bc0a1e13d298fa2cb24359a25ea93bcee55ac8d6d2"
+    },
+    {
+      "api": 1,
+      "id": "cleantv-wallpapers",
+      "name": "Wallpapers",
+      "version": "1.0.0",
+      "kind": "wallpapers",
+      "description": "Own photos as Home wallpapers, streamed from this catalog, with favourites for rotation",
+      "author": "Psychnix",
+      "license": "MIT",
+      "index": "cleantv-wallpapers/index.json",
+      "path": "cleantv-packages/cleantv-wallpapers/1.0.0.json",
+      "sha256": "370c09b7ac109da0c302a3a2c4372e34e24a44719a4279a2284bfbf88864ab52"
     }
   ]
 }
