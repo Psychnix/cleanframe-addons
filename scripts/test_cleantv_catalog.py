@@ -119,6 +119,10 @@ def _(f):f.save(b'\xef\xbb\xbf'+dump(f.catalog))
 @case('catalog with NaN',False,'the catalog must be UTF-8 JSON')
 def _(f):f.save(dump(f.catalog).replace(b'"api": 2',b'"api": NaN',1))
 
+@case('the id constructor, which the host refuses',False,'ValidationError')
+def _(f):
+    f.add(weather(id='constructor',path='cleantv-packages/constructor/1.0.0.json'));f.save()
+
 @case('weather package in cleantv-packages',True)
 def _(f):
     f.add(weather());f.save()

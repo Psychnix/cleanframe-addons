@@ -38,7 +38,7 @@
     },
     "id": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9-]{0,47}$"
+      "pattern": "^(?!constructor$)[a-z][a-z0-9-]{0,47}$"
     },
     "version": {
       "type": "string",
