@@ -71,7 +71,7 @@ Each entry is a declarative API 1 package with the metadata rules of `package.sc
 
 The TV measures text in UTF-16 code units, as JavaScript does, so an emoji or another character outside the Basic Multilingual Plane counts twice: name, description, author and license allow 240 units, `text` 500 units. The catalog and every package must be UTF-8 without a byte order mark; Windows PowerShell 5.1 `Out-File` writes UTF-16 by default. One over-long entry or a catalog in another encoding fails the whole catalog refresh on every TV, so `validate.py` rejects both.
 
-`python scripts/validate.py` checks this catalog as well, and `python scripts/test_cleantv_catalog.py` tests those checks. Hash the committed bytes: a Windows checkout with `core.autocrlf` may change line endings, so `git show HEAD:<path> | sha256sum` is the reliable value.
+`python scripts/validate.py` checks this catalog as well, and `python scripts/test_cleantv_catalog.py` tests those checks, each case on the committed tree and again with one generated wallpaper in the index, so the tests hold once photos are committed. Hash the committed bytes: a Windows checkout with `core.autocrlf` may change line endings, so `git show HEAD:<path> | sha256sum` is the reliable value.
 
 ### CleanTV wallpapers
 
