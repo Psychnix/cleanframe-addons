@@ -181,6 +181,27 @@ def _(f):
     file=f.root/'cleantv-packages'/'cleantv-weather'/'0.9.0.json';file.parent.mkdir(parents=True)
     file.write_bytes(dump({'api':1,'id':'cleantv-weather','name':'Weather','version':'0.9.0','kind':'weather','description':EMOJI*121,'author':'Psychnix','license':'MIT'}))
 
+@case('the upstream Spotify package is listed unchanged',True)
+def _(f):
+    entry=f.entry('spotify')
+    assert entry['path']=='packages/spotify/1.0.0.json' and entry['sha256']==hashlib.sha256((f.root/entry['path']).read_bytes()).hexdigest()
+
+@case('spotify entry with a checksum other than the committed bytes',False,'spotify: sha256 does not match')
+def _(f):
+    f.entry('spotify')['sha256']='0'*64;f.save()
+
+@case('spotify entry whose metadata differs from the upstream file',False,'spotify: package must equal the entry')
+def _(f):
+    entry=f.entry('spotify');entry['description']='Changed';f.save()
+
+@case('spotify kind under another id (catalog only)',False,'ValidationError')
+def _(f):
+    f.catalog['addons'].append(dict(f.entry('spotify'),id='my-spotify',path='packages/my-spotify/1.0.0.json'));f.save()
+
+@case('spotify entry under cleantv-packages/',False,'ValidationError')
+def _(f):
+    f.entry('spotify')['path']='cleantv-packages/spotify/1.0.0.json';f.save()
+
 def main():
     failures=0
     with tempfile.TemporaryDirectory(prefix='cleantv-validate-') as temp:
