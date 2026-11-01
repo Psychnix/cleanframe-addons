@@ -1,0 +1,43 @@
+name: Generate CleanTV wallpapers
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cleantv-wallpapers/images/**'
+      - 'cleantv-wallpapers/tools/**'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: cleantv-wallpapers
+  cancel-in-progress: false
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      # The tip of main, so a queued run builds on the previous run's commit.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r cleantv-wallpapers/tools/requirements.txt jsonschema==4.23.0
+      - run: python cleantv-wallpapers/tools/generate.py
+      - run: python scripts/validate.py
+      - name: Commit generated wallpapers
+        run: |
+          # Only the generator's outputs; generated/ is absent while images/ is empty.
+          paths=cleantv-wallpapers/index.json
+          if [ -e cleantv-wallpapers/generated ] || git ls-files --error-unmatch cleantv-wallpapers/generated > /dev/null 2>&1; then
+            paths="$paths cleantv-wallpapers/generated"
+          fi
+          git add -A -- $paths
+          if git diff --cached --quiet; then
+            echo 'The generated wallpapers did not change.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Generate CleanTV wallpapers [skip ci]'
+          git push origin HEAD:main

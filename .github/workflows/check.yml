@@ -13,6 +13,15 @@ jobs:
       - run: pip install jsonschema==4.23.0
       - run: python scripts/validate.py
       - run: python scripts/test_cleantv_catalog.py
+  wallpapers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r cleantv-wallpapers/tools/requirements.txt jsonschema==4.23.0
+      - run: python cleantv-wallpapers/tools/test_generate.py
   remote-protocol:
     runs-on: ubuntu-latest
     steps:
