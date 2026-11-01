@@ -1,0 +1,31 @@
+name: Generate CleanTV wallpapers
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cleantv-wallpapers/images/**'
+      - 'cleantv-wallpapers/tools/**'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: cleantv-wallpapers
+  cancel-in-progress: false
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      # The tip of main, so a queued run builds on the previous run's commit.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r cleantv-wallpapers/tools/requirements.txt jsonschema==4.23.0
+      - run: python cleantv-wallpapers/tools/generate.py
+      - run: python scripts/validate.py
+      # Only the generator's outputs, as github-actions[bot] with [skip ci]; rebases and retries when
+      # main moved during the run (see the script).
+      - name: Commit generated wallpapers
+        run: bash cleantv-wallpapers/tools/publish.sh

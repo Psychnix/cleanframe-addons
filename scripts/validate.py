@@ -106,3 +106,42 @@ for file in sorted(cleantv_dir.rglob('*.json')) if cleantv_dir.is_dir() else []:
     require(label==f"cleantv-packages/{item['id']}/{item['version']}.json",f'{label}: path must be cleantv-packages/<id>/<version>.json')
     host_limits(item,label)
 print('CleanTV catalog, checksums and packages validated.')
+
+# CleanTV wallpapers: index.json and generated/ come from cleantv-wallpapers/tools/generate.py.
+# The Samsung host refuses an index above 262144 bytes or 200 entries and downloads each file by its exact size and sha256.
+WALLPAPER_FILES={'jpg':'image.jpg','thumb':'thumb.jpg','panel':'panel.jpg','study-soft':'study-soft.jpg','field-blur':'field-blur.jpg','field-frost':'field-frost.jpg','field-clear':'field-clear.jpg'}
+WALLPAPER_LIMITS={'jpg':4194304,'thumb':262144,'panel':65536,'study-soft':2097152,'field-blur':2097152,'field-frost':2097152,'field-clear':2097152}
+def wallpaper_require(condition,message):
+    if not condition:raise SystemExit('cleantv-wallpapers/index.json: '+message)
+wallpaper_root=root/'cleantv-wallpapers'
+wallpaper_index=wallpaper_root/'index.json'
+if any(entry['kind']=='wallpapers' for entry in cleantv['addons']) or wallpaper_index.exists():
+    wallpaper_require(wallpaper_index.is_file(),'missing; a wallpapers package needs the generated index')
+    raw=wallpaper_index.read_bytes()
+    wallpaper_require(len(raw)<=262144,f'{len(raw)} bytes exceeds 262144 (Samsung host limit)')
+    try:index=json.loads(raw.decode('utf-8'),parse_constant=reject_constant)
+    except ValueError:raise SystemExit('cleantv-wallpapers/index.json: must be UTF-8 JSON without a byte order mark, NaN or Infinity')
+    Draft7Validator(json.loads((wallpaper_root/'index.schema.json').read_bytes())).validate(index)
+    wallpaper_require(len(index['entries'])<=200,'more than 200 entries')
+    wallpaper_ids=set();referenced=set()
+    for entry in index['entries']:
+        wid=entry['id']
+        wallpaper_require(wid not in wallpaper_ids,f'duplicate id {wid}')
+        wallpaper_ids.add(wid)
+        wallpaper_require(units(entry['title'])<=120,f'{wid}: title exceeds 120 UTF-16 code units (Samsung host limit)')
+        wallpaper_require(entry['rev']==entry['files']['jpg']['sha256'][:12],f'{wid}: rev must be the first 12 hex digits of the jpg sha256')
+        for role,name in WALLPAPER_FILES.items():
+            item=entry['files'][role];path=f'cleantv-wallpapers/generated/{wid}/{name}'
+            wallpaper_require(item['path']==path,f'{wid}: the {role} path must be {path}')
+            wallpaper_require(item['size']<=WALLPAPER_LIMITS[role],f'{wid}: {role} exceeds {WALLPAPER_LIMITS[role]} bytes')
+            file=root/path
+            wallpaper_require(file.is_file(),f'{wid}: {path} does not exist')
+            data=file.read_bytes()
+            wallpaper_require(len(data)==item['size'],f"{wid}: {path} has {len(data)} bytes, not {item['size']}")
+            wallpaper_require(hashlib.sha256(data).hexdigest()==item['sha256'],f'{wid}: sha256 does not match the bytes of {path}')
+            referenced.add(path)
+    generated=wallpaper_root/'generated'
+    # Removing an image removes its folder, so nothing in generated/ may be left without an entry.
+    stray=sorted(p.relative_to(root).as_posix() for p in generated.rglob('*') if p.is_file() and p.relative_to(root).as_posix() not in referenced) if generated.is_dir() else []
+    wallpaper_require(not stray,'files in generated/ that no entry references: '+', '.join(stray[:5]))
+    print(f"CleanTV wallpaper index validated ({len(index['entries'])} entries).")
