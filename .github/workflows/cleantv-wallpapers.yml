@@ -25,19 +25,7 @@ jobs:
       - run: pip install -r cleantv-wallpapers/tools/requirements.txt jsonschema==4.23.0
       - run: python cleantv-wallpapers/tools/generate.py
       - run: python scripts/validate.py
+      # Only the generator's outputs, as github-actions[bot] with [skip ci]; rebases and retries when
+      # main moved during the run (see the script).
       - name: Commit generated wallpapers
-        run: |
-          # Only the generator's outputs; generated/ is absent while images/ is empty.
-          paths=cleantv-wallpapers/index.json
-          if [ -e cleantv-wallpapers/generated ] || git ls-files --error-unmatch cleantv-wallpapers/generated > /dev/null 2>&1; then
-            paths="$paths cleantv-wallpapers/generated"
-          fi
-          git add -A -- $paths
-          if git diff --cached --quiet; then
-            echo 'The generated wallpapers did not change.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Generate CleanTV wallpapers [skip ci]'
-          git push origin HEAD:main
+        run: bash cleantv-wallpapers/tools/publish.sh
