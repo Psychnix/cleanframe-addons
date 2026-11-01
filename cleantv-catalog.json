@@ -1,0 +1,18 @@
+{
+  "api": 2,
+  "addons": [
+    {
+      "api": 1,
+      "id": "cleantv-hello",
+      "name": "CleanTV Test",
+      "version": "1.0.0",
+      "kind": "text",
+      "text": "CleanTV test from the Psychnix fork",
+      "description": "Test text widget that confirms the CleanTV Samsung catalog from the Psychnix fork",
+      "author": "Psychnix",
+      "license": "MIT",
+      "path": "packages/cleantv-hello/1.0.0.json",
+      "sha256": "e7757eb5366282d5bb2328ef864cac59c66cab0bcf274a10779bb12166d7446b"
+    }
+  ]
+}
