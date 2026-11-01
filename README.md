@@ -58,13 +58,17 @@ Die nativen Quellen, festgelegten Abhängigkeiten und ein lokaler Builder sind e
 
 The CleanTV Samsung host reads only `cleantv-catalog.json`; `catalog.json` and `catalog-v2.json` remain unchanged for upstream hosts and clean upstream syncs. The schema is [cleantv-catalog.schema.json](cleantv-catalog.schema.json).
 
-Each entry is a declarative API 1 package with the metadata rules of `package.schema.json` (name, description, author, license, version `x.y.z`), plus `path` (`packages/<id>/<version>.json`) and the lowercase SHA-256 of that file's exact bytes. The package file equals the entry without `path` and `sha256`. Packages contain no executable code; behaviour lives in the host. Limits: 32 entries, unique IDs, 64 KiB per package.
+Each entry is a declarative API 1 package with the metadata rules of `package.schema.json` (name, description, author, license, version `x.y.z`), plus `path` and the lowercase SHA-256 of that file's exact bytes. The package file equals the entry without `path` and `sha256`, with the same JSON types (`1`, `1.0` and `true` differ). Packages contain no executable code; behaviour lives in the host. Limits: 32 entries, unique IDs, 64 KiB per package, 128 KiB for the catalog.
 
-| Kind | Rules |
-| --- | --- |
-| `text`, `clock` | As in `package.schema.json` (optional `text`, `timeZone`). |
-| `spotify` | The ID must be `spotify`. |
-| `wallpapers` | CleanTV only. Requires `index`, the repository path `cleantv-wallpapers/index.json`. |
-| `weather` | CleanTV only. No additional fields. |
+| Kind | Package path | Rules |
+| --- | --- | --- |
+| `text`, `clock` | `packages/<id>/<version>.json` | As in `package.schema.json` (optional `text`, `timeZone` up to 64 characters). |
+| `spotify` | `packages/<id>/<version>.json` | The ID must be `spotify`. |
+| `wallpapers` | `cleantv-packages/<id>/<version>.json` | CleanTV only. Requires `index`, the repository path `cleantv-wallpapers/index.json`. |
+| `weather` | `cleantv-packages/<id>/<version>.json` | CleanTV only. No additional fields. |
 
-`python scripts/validate.py` checks this catalog as well. Hash the committed bytes: a Windows checkout with `core.autocrlf` may change line endings, so `git show HEAD:<path> | sha256sum` is the reliable value.
+`cleantv-packages/` keeps the CleanTV-only kinds out of the upstream `packages/` check, which knows only `package.schema.json`. Every file there must be a `weather` or `wallpapers` package at its own `<id>/<version>` path.
+
+The TV measures text in UTF-16 code units, as JavaScript does, so an emoji or another character outside the Basic Multilingual Plane counts twice: name, description, author and license allow 240 units, `text` 500 units. The catalog and every package must be UTF-8 without a byte order mark; Windows PowerShell 5.1 `Out-File` writes UTF-16 by default. One over-long entry or a catalog in another encoding fails the whole catalog refresh on every TV, so `validate.py` rejects both.
+
+`python scripts/validate.py` checks this catalog as well, and `python scripts/test_cleantv_catalog.py` tests those checks. Hash the committed bytes: a Windows checkout with `core.autocrlf` may change line endings, so `git show HEAD:<path> | sha256sum` is the reliable value.

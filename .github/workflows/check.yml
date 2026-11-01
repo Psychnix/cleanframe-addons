@@ -12,6 +12,7 @@ jobs:
           python-version: '3.12'
       - run: pip install jsonschema==4.23.0
       - run: python scripts/validate.py
+      - run: python scripts/test_cleantv_catalog.py
   remote-protocol:
     runs-on: ubuntu-latest
     steps:

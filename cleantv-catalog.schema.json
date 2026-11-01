@@ -53,6 +53,11 @@
       "type": "string",
       "pattern": "^packages/[a-z0-9-]+/[0-9]+\\.[0-9]+\\.[0-9]+\\.json$"
     },
+    "cleantvPath": {
+      "$comment": "Kinds unknown to package.schema.json keep their packages outside the upstream packages/ directory.",
+      "type": "string",
+      "pattern": "^cleantv-packages/[a-z0-9-]+/[0-9]+\\.[0-9]+\\.[0-9]+\\.json$"
+    },
     "sha256": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
@@ -93,7 +98,8 @@
           "maxLength": 500
         },
         "timeZone": {
-          "type": "string"
+          "type": "string",
+          "maxLength": 64
         },
         "name": {
           "$ref": "#/definitions/label"
@@ -209,7 +215,7 @@
           "$ref": "#/definitions/label"
         },
         "path": {
-          "$ref": "#/definitions/path"
+          "$ref": "#/definitions/cleantvPath"
         },
         "sha256": {
           "$ref": "#/definitions/sha256"
@@ -257,7 +263,7 @@
           "$ref": "#/definitions/label"
         },
         "path": {
-          "$ref": "#/definitions/path"
+          "$ref": "#/definitions/cleantvPath"
         },
         "sha256": {
           "$ref": "#/definitions/sha256"
