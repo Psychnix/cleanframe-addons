@@ -16,6 +16,18 @@
     },
     {
       "api": 1,
+      "id": "cleantv-weather",
+      "name": "Wetter",
+      "version": "1.0.0",
+      "kind": "weather",
+      "description": "Aktuelles Wetter unter der Uhr: Ort, Temperatur, Höchst- und Tiefstwert, Wind und Wettersymbol. Daten von Open-Meteo.com, Orte von GeoNames und OpenPLZ.",
+      "author": "Psychnix",
+      "license": "MIT",
+      "path": "cleantv-packages/cleantv-weather/1.0.0.json",
+      "sha256": "1c8cb0262e9890b3a44827bc0a1e13d298fa2cb24359a25ea93bcee55ac8d6d2"
+    },
+    {
+      "api": 1,
       "id": "cleantv-wallpapers",
       "name": "Wallpapers",
       "version": "1.0.0",

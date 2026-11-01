@@ -243,7 +243,8 @@
           "$ref": "#/definitions/api"
         },
         "id": {
-          "$ref": "#/definitions/id"
+          "$comment": "The Samsung host accepts the weather kind only with this ID; any other ID fails the whole catalog refresh on every TV.",
+          "const": "cleantv-weather"
         },
         "version": {
           "$ref": "#/definitions/version"

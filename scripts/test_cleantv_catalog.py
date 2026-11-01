@@ -55,6 +55,8 @@ class Fixture:
         file.write_bytes(data)
         entry['sha256']=hashlib.sha256(data).hexdigest()
     def add(self,entry,data=None):
+        # The catalog already lists cleantv-weather; a case's own entry replaces the listed one.
+        self.catalog['addons']=[other for other in self.catalog['addons'] if other['id']!=entry['id']]
         self.catalog['addons'].append(entry)
         self.package(entry,data)
     def save(self,data=None):(self.root/'cleantv-catalog.json').write_bytes(dump(self.catalog) if data is None else data)
@@ -149,6 +151,24 @@ def _(f):
 def _(f):
     without_wallpapers(f);f.add(weather());f.add(wallpapers());f.save()
 
+@case('the listed weather package (exact bytes, CleanTV path)',True)
+def _(f):
+    entry=f.entry('cleantv-weather')
+    assert entry['path']=='cleantv-packages/cleantv-weather/1.0.0.json' and entry['kind']=='weather'
+
+@case('weather entry with another id, which the host refuses',False,'ValidationError')
+def _(f):
+    f.add(weather(id='weather-two',path='cleantv-packages/weather-two/1.0.0.json'));f.save()
+
+@case('listed weather entry with an extra field',False,'ValidationError')
+def _(f):
+    f.add(weather(script='alert(1)'));f.save()
+
+@case('unlisted weather package with another id',False,'ValidationError')
+def _(f):
+    file=f.root/'cleantv-packages'/'weather-two'/'1.0.0.json';file.parent.mkdir(parents=True,exist_ok=True)
+    file.write_bytes(dump({'api':1,'id':'weather-two','name':'Weather','version':'1.0.0','kind':'weather','description':'Weather','author':'Psychnix','license':'MIT'}))
+
 @case('wallpapers entry with another id, which the host module ignores',False,'ValidationError')
 def _(f):
     f.add(dict(f.entry('cleantv-wallpapers'),id='wallpapers-two',path='cleantv-packages/wallpapers-two/1.0.0.json'));f.save()
@@ -186,22 +206,22 @@ def _(f):
 
 @case('unlisted text package in cleantv-packages/',False,'only weather, wallpapers packages belong in cleantv-packages/')
 def _(f):
-    file=f.root/'cleantv-packages'/'cleantv-note'/'1.0.0.json';file.parent.mkdir(parents=True)
+    file=f.root/'cleantv-packages'/'cleantv-note'/'1.0.0.json';file.parent.mkdir(parents=True,exist_ok=True)
     file.write_bytes(dump({'api':1,'id':'cleantv-note','name':'Note','version':'1.0.0','kind':'text','description':'Note','author':'Psychnix','license':'MIT'}))
 
 @case('unlisted weather package with an extra field',False,'ValidationError')
 def _(f):
-    file=f.root/'cleantv-packages'/'cleantv-weather'/'0.9.0.json';file.parent.mkdir(parents=True)
+    file=f.root/'cleantv-packages'/'cleantv-weather'/'0.9.0.json';file.parent.mkdir(parents=True,exist_ok=True)
     file.write_bytes(dump({'api':1,'id':'cleantv-weather','name':'Weather','version':'0.9.0','kind':'weather','description':'Weather','author':'Psychnix','license':'MIT','script':'x'}))
 
 @case('unlisted weather package at the wrong path',False,'path must be cleantv-packages/<id>/<version>.json')
 def _(f):
-    file=f.root/'cleantv-packages'/'cleantv-weather'/'0.9.0.json';file.parent.mkdir(parents=True)
+    file=f.root/'cleantv-packages'/'cleantv-weather'/'0.9.0.json';file.parent.mkdir(parents=True,exist_ok=True)
     file.write_bytes(dump({'api':1,'id':'cleantv-weather','name':'Weather','version':'0.8.0','kind':'weather','description':'Weather','author':'Psychnix','license':'MIT'}))
 
 @case('unlisted weather package over the host limit',False,'cleantv-packages/cleantv-weather/0.9.0.json: description exceeds 240')
 def _(f):
-    file=f.root/'cleantv-packages'/'cleantv-weather'/'0.9.0.json';file.parent.mkdir(parents=True)
+    file=f.root/'cleantv-packages'/'cleantv-weather'/'0.9.0.json';file.parent.mkdir(parents=True,exist_ok=True)
     file.write_bytes(dump({'api':1,'id':'cleantv-weather','name':'Weather','version':'0.9.0','kind':'weather','description':EMOJI*121,'author':'Psychnix','license':'MIT'}))
 
 # ---------- Wallpaper index (cleantv-wallpapers/index.json) ----------
