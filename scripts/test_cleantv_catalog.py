@@ -45,6 +45,8 @@ class Fixture:
         file.write_bytes(data)
         entry['sha256']=hashlib.sha256(data).hexdigest()
     def add(self,entry,data=None):
+        # The catalog already lists cleantv-weather; a case's own entry replaces the listed one.
+        self.catalog['addons']=[other for other in self.catalog['addons'] if other['id']!=entry['id']]
         self.catalog['addons'].append(entry)
         self.package(entry,data)
     def save(self,data=None):(self.root/'cleantv-catalog.json').write_bytes(dump(self.catalog) if data is None else data)
@@ -134,6 +136,11 @@ def _(f):
 @case('weather and wallpapers together',True)
 def _(f):
     f.add(weather());f.add(wallpapers());f.save()
+
+@case('the listed weather package (exact bytes, CleanTV path)',True)
+def _(f):
+    entry=f.entry('cleantv-weather')
+    assert entry['path']=='cleantv-packages/cleantv-weather/1.0.0.json' and entry['kind']=='weather'
 
 @case('weather entry with another id, which the host refuses',False,'ValidationError')
 def _(f):
