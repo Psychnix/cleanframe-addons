@@ -190,7 +190,8 @@
           "$ref": "#/definitions/api"
         },
         "id": {
-          "$ref": "#/definitions/id"
+          "$comment": "The Samsung host module serves only this ID; an entry under any other ID installs but never shows a photo.",
+          "const": "cleantv-wallpapers"
         },
         "version": {
           "$ref": "#/definitions/version"
