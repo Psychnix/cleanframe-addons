@@ -64,14 +64,14 @@ Each entry is a declarative API 1 package with the metadata rules of `package.sc
 | --- | --- | --- |
 | `text`, `clock` | `packages/<id>/<version>.json` | As in `package.schema.json` (optional `text`, `timeZone` up to 64 characters). |
 | `spotify` | `packages/<id>/<version>.json` | The ID must be `spotify`. |
-| `wallpapers` | `cleantv-packages/<id>/<version>.json` | CleanTV only. Requires `index`, the repository path `cleantv-wallpapers/index.json`. |
+| `wallpapers` | `cleantv-packages/<id>/<version>.json` | CleanTV only. The ID must be `cleantv-wallpapers` (the host module serves no other). Requires `index`, the repository path `cleantv-wallpapers/index.json`. |
 | `weather` | `cleantv-packages/<id>/<version>.json` | CleanTV only. The ID must be `cleantv-weather` (the host refuses any other); no additional fields. Listed as `Wetter` 1.0.0. |
 
 `cleantv-packages/` keeps the CleanTV-only kinds out of the upstream `packages/` check, which knows only `package.schema.json`. Every file there must be a `weather` or `wallpapers` package at its own `<id>/<version>` path.
 
 The TV measures text in UTF-16 code units, as JavaScript does, so an emoji or another character outside the Basic Multilingual Plane counts twice: name, description, author and license allow 240 units, `text` 500 units. The catalog and every package must be UTF-8 without a byte order mark; Windows PowerShell 5.1 `Out-File` writes UTF-16 by default. One over-long entry or a catalog in another encoding fails the whole catalog refresh on every TV, so `validate.py` rejects both.
 
-`python scripts/validate.py` checks this catalog as well, and `python scripts/test_cleantv_catalog.py` tests those checks. Hash the committed bytes: a Windows checkout with `core.autocrlf` may change line endings, so `git show HEAD:<path> | sha256sum` is the reliable value.
+`python scripts/validate.py` checks this catalog as well, and `python scripts/test_cleantv_catalog.py` tests those checks, each case on the committed tree and again with one generated wallpaper in the index, so the tests hold once photos are committed. Hash the committed bytes: a Windows checkout with `core.autocrlf` may change line endings, so `git show HEAD:<path> | sha256sum` is the reliable value.
 
 ### CleanTV wallpapers
 

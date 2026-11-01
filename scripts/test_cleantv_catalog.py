@@ -5,13 +5,17 @@ CleanTV catalog or its packages and runs the real validate.py there. The cases
 cover gaps where validate.py once passed a catalog that the Samsung host rejects
 for every TV (UTF-16 lengths, non-UTF-8 encodings) or could never accept a valid
 package (weather and wallpapers outside the upstream packages/ directory).
+Every case runs twice: on the committed tree and on one whose committed
+wallpaper index already lists a generated wallpaper, as after the generator's
+first commit.
 """
 import hashlib,json,os,shutil,subprocess,sys,tempfile
 from pathlib import Path
 
 repo=Path(__file__).resolve().parents[1]
-INPUTS=['catalog.json','catalog-v2.json','catalog-v2.schema.json','native-package.schema.json','package.schema.json','cleantv-catalog.json','cleantv-catalog.schema.json']
-FOLDERS=['packages','examples','cleantv-packages','cleantv-wallpapers']
+INPUTS=['catalog.json','catalog-v2.json','catalog-v2.schema.json','native-package.schema.json','package.schema.json','cleantv-catalog.json','cleantv-catalog.schema.json','cleantv-wallpapers/index.json','cleantv-wallpapers/index.schema.json']
+# validate.py never reads cleantv-wallpapers/images/ (originals up to 30 MB each) or tools/, so the cases copy neither.
+FOLDERS=['packages','examples','cleantv-packages','cleantv-wallpapers/generated']
 HELLO='packages/cleantv-hello/1.0.0.json'
 
 def copy_inputs(target):
@@ -35,6 +39,12 @@ class Fixture:
     def __init__(self,root):
         self.root=root
         self.catalog=json.loads((root/'cleantv-catalog.json').read_bytes().decode('utf-8'))
+        self._wallpapers_reset=False
+    def reset_wallpapers(self):
+        """Remove the committed generated/ files once, before the case writes its own wallpaper index."""
+        if not self._wallpapers_reset:
+            shutil.rmtree(self.root/'cleantv-wallpapers'/'generated',ignore_errors=True)
+            self._wallpapers_reset=True
     def entry(self,name):return next(entry for entry in self.catalog['addons'] if entry['id']==name)
     def package(self,entry,data=None):
         """Write the package for an entry (its own fields unless data is given) and record its hash."""
@@ -159,6 +169,15 @@ def _(f):
     file=f.root/'cleantv-packages'/'weather-two'/'1.0.0.json';file.parent.mkdir(parents=True,exist_ok=True)
     file.write_bytes(dump({'api':1,'id':'weather-two','name':'Weather','version':'1.0.0','kind':'weather','description':'Weather','author':'Psychnix','license':'MIT'}))
 
+@case('wallpapers entry with another id, which the host module ignores',False,'ValidationError')
+def _(f):
+    f.add(dict(f.entry('cleantv-wallpapers'),id='wallpapers-two',path='cleantv-packages/wallpapers-two/1.0.0.json'));f.save()
+
+@case('unlisted wallpapers package with another id',False,"'cleantv-wallpapers' was expected")
+def _(f):
+    file=f.root/'cleantv-packages'/'wallpapers-two'/'1.0.0.json';file.parent.mkdir(parents=True,exist_ok=True)
+    file.write_bytes(dump({'api':1,'id':'wallpapers-two','name':'Wallpapers','version':'1.0.0','kind':'wallpapers','description':'Wallpapers','author':'Psychnix','license':'MIT','index':'cleantv-wallpapers/index.json'}))
+
 @case('weather entry under packages/',False,'ValidationError')
 def _(f):
     f.add(weather(path='packages/cleantv-weather/1.0.0.json'));f.save()
@@ -210,6 +229,7 @@ WALLPAPER_FILES={'jpg':'image.jpg','thumb':'thumb.jpg','panel':'panel.jpg','stud
 
 def wallpaper(f,wid='aw-berg',title='Berg',**extra):
     """Write seven stand-in files for one entry (validate.py checks bytes, not pixels) and return the entry."""
+    f.reset_wallpapers()  # wallpaper() runs before save_index(), so the first of the two clears generated/
     files={}
     for role,name in WALLPAPER_FILES.items():
         data=(wid+'/'+role).encode('ascii')*8
@@ -221,6 +241,7 @@ def wallpaper(f,wid='aw-berg',title='Berg',**extra):
     return entry
 
 def save_index(f,entries,data=None):
+    f.reset_wallpapers()
     body=json.dumps({'api':1,'entries':entries},ensure_ascii=False,separators=(',',':'))+'\n'
     (f.root/'cleantv-wallpapers'/'index.json').write_bytes(body.encode('utf-8') if data is None else data)
 
@@ -289,25 +310,40 @@ def _(f):
 @case('wallpaper index encoded as UTF-16',False,'cleantv-wallpapers/index.json: must be UTF-8 JSON')
 def _(f):save_index(f,[],json.dumps({'api':1,'entries':[]}).encode('utf-16'))
 
+def committed_wallpaper(f):
+    # After the generator's first bot commit the committed index is not empty; aw-abend sorts before the stray aw-alt above.
+    save_index(f,[wallpaper(f,'aw-abend','Abend')])
+
+# Every case runs on the committed tree and again on one whose committed index already lists a generated wallpaper.
+PASSES=[('committed tree',None),('committed tree with one generated wallpaper',committed_wallpaper)]
+
 def main():
     failures=0
     with tempfile.TemporaryDirectory(prefix='cleantv-validate-') as temp:
-        base=Path(temp)/'base'
-        copy_inputs(base)
-        for index,(name,change,passes,expect) in enumerate(CASES):
-            root=Path(temp)/f'case{index}'
-            shutil.copytree(base,root)
-            change(Fixture(root))
-            result=subprocess.run([sys.executable,str(root/'scripts'/'validate.py')],cwd=root,capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1'))
-            output=result.stdout+result.stderr
-            ok=(result.returncode==0)==passes and expect in output
-            if passes and 'CleanTV catalog, checksums and packages validated.' not in output:ok=False
-            print(('ok   ' if ok else 'FAIL ')+name)
-            if not ok:
-                failures+=1
-                print('     exit',result.returncode,'expected',('pass' if passes else 'failure containing '+repr(expect)))
-                print('     '+output.strip().replace('\n','\n     ')[-1500:])
-    print(f'{len(CASES)-failures}/{len(CASES)} CleanTV validator cases passed.')
+        for number,(label,seed) in enumerate(PASSES):
+            print('-- '+label)
+            base=Path(temp)/f'base{number}'
+            copy_inputs(base)
+            if seed:seed(Fixture(base))
+            for index,(name,change,passes,expect) in enumerate(CASES):
+                root=Path(temp)/f'case{number}-{index}'
+                shutil.copytree(base,root)
+                change(Fixture(root))
+                result=subprocess.run([sys.executable,str(root/'scripts'/'validate.py')],cwd=root,capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1'))
+                output=result.stdout+result.stderr
+                ok=(result.returncode==0)==passes and expect in output
+                if passes and 'CleanTV catalog, checksums and packages validated.' not in output:ok=False
+                # validate.py never reads the originals (up to 30 MB each), so no case tree may hold a copy.
+                if (root/'cleantv-wallpapers'/'images').exists():ok=False;output+='\ncleantv-wallpapers/images/ was copied into the case'
+                print(('ok   ' if ok else 'FAIL ')+name)
+                if not ok:
+                    failures+=1
+                    print('     exit',result.returncode,'expected',('pass' if passes else 'failure containing '+repr(expect)))
+                    print('     '+output.strip().replace('\n','\n     ')[-1500:])
+                shutil.rmtree(root,ignore_errors=True)  # at most the base and one case tree on disk
+            shutil.rmtree(base,ignore_errors=True)
+    total=len(PASSES)*len(CASES)
+    print(f'{total-failures}/{total} CleanTV validator cases passed.')
     return 1 if failures else 0
 
 if __name__=='__main__':sys.exit(main())
