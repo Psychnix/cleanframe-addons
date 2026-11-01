@@ -64,7 +64,7 @@ Each entry is a declarative API 1 package with the metadata rules of `package.sc
 | --- | --- | --- |
 | `text`, `clock` | `packages/<id>/<version>.json` | As in `package.schema.json` (optional `text`, `timeZone` up to 64 characters). |
 | `spotify` | `packages/<id>/<version>.json` | The ID must be `spotify`. |
-| `wallpapers` | `cleantv-packages/<id>/<version>.json` | CleanTV only. Requires `index`, the repository path `cleantv-wallpapers/index.json`. |
+| `wallpapers` | `cleantv-packages/<id>/<version>.json` | CleanTV only. The ID must be `cleantv-wallpapers` (the host module serves no other). Requires `index`, the repository path `cleantv-wallpapers/index.json`. |
 | `weather` | `cleantv-packages/<id>/<version>.json` | CleanTV only. No additional fields. |
 
 `cleantv-packages/` keeps the CleanTV-only kinds out of the upstream `packages/` check, which knows only `package.schema.json`. Every file there must be a `weather` or `wallpapers` package at its own `<id>/<version>` path.

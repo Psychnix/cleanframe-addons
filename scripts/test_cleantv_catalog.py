@@ -149,6 +149,15 @@ def _(f):
 def _(f):
     without_wallpapers(f);f.add(weather());f.add(wallpapers());f.save()
 
+@case('wallpapers entry with another id, which the host module ignores',False,'ValidationError')
+def _(f):
+    f.add(dict(f.entry('cleantv-wallpapers'),id='wallpapers-two',path='cleantv-packages/wallpapers-two/1.0.0.json'));f.save()
+
+@case('unlisted wallpapers package with another id',False,"'cleantv-wallpapers' was expected")
+def _(f):
+    file=f.root/'cleantv-packages'/'wallpapers-two'/'1.0.0.json';file.parent.mkdir(parents=True,exist_ok=True)
+    file.write_bytes(dump({'api':1,'id':'wallpapers-two','name':'Wallpapers','version':'1.0.0','kind':'wallpapers','description':'Wallpapers','author':'Psychnix','license':'MIT','index':'cleantv-wallpapers/index.json'}))
+
 @case('weather entry under packages/',False,'ValidationError')
 def _(f):
     f.add(weather(path='packages/cleantv-weather/1.0.0.json'));f.save()
