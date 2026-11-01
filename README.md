@@ -63,7 +63,7 @@ Each entry is a declarative API 1 package with the metadata rules of `package.sc
 | Kind | Package path | Rules |
 | --- | --- | --- |
 | `text`, `clock` | `packages/<id>/<version>.json` | As in `package.schema.json` (optional `text`, `timeZone` up to 64 characters). |
-| `spotify` | `packages/<id>/<version>.json` | The ID must be `spotify`. |
+| `spotify` | `packages/<id>/<version>.json` | The ID must be `spotify`. The catalog lists the upstream `packages/spotify/1.0.0.json` unchanged; the Samsung host adds the Spotify Web API adapter and the QR sign-in relay itself. |
 | `wallpapers` | `cleantv-packages/<id>/<version>.json` | CleanTV only. The ID must be `cleantv-wallpapers` (the host module serves no other). Requires `index`, the repository path `cleantv-wallpapers/index.json`. |
 | `weather` | `cleantv-packages/<id>/<version>.json` | CleanTV only. The ID must be `cleantv-weather` (the host refuses any other); no additional fields. Listed as `Wetter` 1.0.0. |
 
